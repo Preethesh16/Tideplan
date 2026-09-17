@@ -42,6 +42,7 @@ await mobile.goto(process.env.BASE_URL||'http://localhost:4180');await mobile.wa
 assert.equal(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true,'mobile should not overflow');
 await mobile.getByRole('button',{name:'Toggle navigation'}).click();
 await mobile.getByRole('button',{name:'Plan studio',exact:true}).click();
+await mobile.waitForTimeout(600);
 await mobile.screenshot({path:'docs/images/mobile.png',fullPage:true});
 assert.deepEqual(errors,[]);await browser.close();
 console.log('PASS: desktop workflow, stress guard, explicit consent, stale-plan guard, reserve, tamper detection, persistence, mobile layout.');

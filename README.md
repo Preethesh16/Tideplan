@@ -7,7 +7,7 @@
 
 Cash-flow-aware microloan planning · Explicit borrower consent · Verifiable decision history
 
-[**Launch the interactive demo →**](https://preethesh16.github.io/Tideplan/) · [**Watch the narrated walkthrough →**](https://preethesh16.github.io/Tideplan/demo/) · [How it works](#the-decision-engine)
+[**Launch the interactive demo →**](https://preethesh16.github.io/Tideplan/) · [How it works](#the-decision-engine) · [Technology](#architecture--technology)
 
 Built by **Team Hardcoder** · Problem: **Dynamic Microloan Repayment & Cash-Flow Planning** · **SDG 8**
 
@@ -36,7 +36,7 @@ TidePlan puts that question at the centre of a lender–borrower conversation. I
 5. **Open Trust ledger.** Simulate a ₹1,000 reserve grant, verify the event hashes, and test a tampered copy. Nothing moves on a payment network.
 6. **Switch to Ravi Kumar.** A sustained year-on-year decline is flagged for intervention—not explained away as seasonality.
 
-[Watch the screen-recorded, narrated demo](https://preethesh16.github.io/Tideplan/demo/). The player uses ordinary HTML video rather than GitHub's unsupported MP4 file preview. [Download the MP4](https://preethesh16.github.io/Tideplan/demo/tideplan-demo.mp4).
+**Narrated recording: in progress, paused at the team's request.** The interactive demo is ready to explore. Recording and narration scripts are included under `scripts/`; the finished video is not published yet.
 
 ## One example, every rupee accounted for
 
