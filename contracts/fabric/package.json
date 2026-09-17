@@ -1,0 +1,1 @@
+{"name":"tideplan-trust-chaincode","version":"0.1.0","private":true,"main":"index.cjs","scripts":{"start":"fabric-chaincode-node start"},"dependencies":{"fabric-contract-api":"^2.5.0","fabric-shim":"^2.5.0"}}
