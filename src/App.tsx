@@ -1,58 +1,1379 @@
-import {useMemo,useState} from 'react';
-import {AreaChart,Area,Line,ComposedChart,CartesianGrid,XAxis,YAxis,Tooltip,ResponsiveContainer,Legend,BarChart,Bar} from 'recharts';
-import {Waves,LayoutDashboard,SlidersHorizontal,ShieldCheck,ArrowUpRight,ArrowRight,ChevronRight,Download,Upload,Check,CheckCircle2,Leaf,Wallet,TrendingUp,CalendarDays,Info,FileCheck2,LockKeyhole,Activity,AlertTriangle,BookOpen,RotateCcw,Link2,Menu,X,ExternalLink,Sparkles} from 'lucide-react';
-import Papa from 'papaparse';
-import {borrowers,type Borrower,type Month} from './data';
-import {analyze,buildPlans,explain,money,sum} from './engine';
-import {append,verify,type AuditEvent} from './trust';
+import { useMemo, useState } from "react";
+import {
+  AreaChart,
+  Area,
+  Line,
+  ComposedChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  BarChart,
+  Bar,
+} from "recharts";
+import {
+  Waves,
+  LayoutDashboard,
+  SlidersHorizontal,
+  ShieldCheck,
+  ArrowUpRight,
+  ArrowRight,
+  ChevronRight,
+  Download,
+  Upload,
+  Check,
+  CheckCircle2,
+  Leaf,
+  Wallet,
+  TrendingUp,
+  CalendarDays,
+  Info,
+  FileCheck2,
+  LockKeyhole,
+  Activity,
+  AlertTriangle,
+  BookOpen,
+  RotateCcw,
+  Link2,
+  Menu,
+  X,
+  ExternalLink,
+  Sparkles,
+} from "lucide-react";
+import Papa from "papaparse";
+import { borrowers, type Borrower, type Month } from "./data";
+import { analyze, buildPlans, explain, money, sum } from "./engine";
+import { append, verify, type AuditEvent } from "./trust";
 
-type Snapshot={fingerprint:string;borrower:string;payments:number[];months:string[];buffer:number;shock:number;total:number;consented:boolean;reserveReleased:number};
-type Saved={events:AuditEvent[];snapshots:Record<string,Snapshot>};
-const initial:Saved={events:[],snapshots:{}};
-function load():Saved{try{const v=JSON.parse(localStorage.getItem('tideplan-v1')||'null');return v&&Array.isArray(v.events)&&v.snapshots?v:initial;}catch{return initial;}}
-const monthName=(month:string)=>new Date(month+'-01T00:00:00Z').toLocaleDateString('en-IN',{month:'short',timeZone:'UTC'});
-function download(name:string,content:string,type='application/json'){const url=URL.createObjectURL(new Blob([content],{type}));const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-const tips={background:'#fff',border:'1px solid #dce5df',borderRadius:12,fontSize:12,boxShadow:'0 8px 30px #163b3010'};
+type Snapshot = {
+  fingerprint: string;
+  borrower: string;
+  payments: number[];
+  months: string[];
+  buffer: number;
+  shock: number;
+  total: number;
+  consented: boolean;
+  reserveReleased: number;
+};
+type Saved = { events: AuditEvent[]; snapshots: Record<string, Snapshot> };
+const initial: Saved = { events: [], snapshots: {} };
+function load(): Saved {
+  try {
+    const v = JSON.parse(localStorage.getItem("tideplan-v1") || "null");
+    return v && Array.isArray(v.events) && v.snapshots ? v : initial;
+  } catch {
+    return initial;
+  }
+}
+const monthName = (month: string) =>
+  new Date(month + "-01T00:00:00Z").toLocaleDateString("en-IN", {
+    month: "short",
+    timeZone: "UTC",
+  });
+function download(name: string, content: string, type = "application/json") {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+const tips = {
+  background: "#fff",
+  border: "1px solid #dce5df",
+  borderRadius: 12,
+  fontSize: 12,
+  boxShadow: "0 8px 30px #163b3010",
+};
 
-export default function App(){
- const [tab,setTab]=useState('Overview'),[selected,setSelected]=useState('asha'),[buffer,setBuffer]=useState(2000),[shock,setShock]=useState(0),[imported,setImported]=useState<Record<string,Month[]>>({}),[saved,setSaved]=useState<Saved>(load),[toast,setToast]=useState(''),[busy,setBusy]=useState(false),[verification,setVerification]=useState<string|null>(null),[menu,setMenu]=useState(false),[consent,setConsent]=useState(false);
- const original=borrowers.find(x=>x.id===selected)!;
- const borrower:Borrower=useMemo(()=>({...original,history:imported[selected]||original.history}),[original,imported,selected]);
- const analysis=useMemo(()=>analyze(borrower,buffer,shock),[borrower,buffer,shock]);
- const plans=useMemo(()=>buildPlans(borrower,analysis,buffer),[borrower,analysis,buffer]);
- const [fixed,aligned]=plans;
- const fingerprint=JSON.stringify({borrower:borrower.id,history:borrower.history,buffer,shock,payments:aligned.payments,total:aligned.total});
- const snapshot=saved.snapshots[selected];
- const current=snapshot?.fingerprint===fingerprint;
- const forecast=analysis.forecast.map((f,i)=>({...f,label:monthName(f.month),fixed:fixed.payments[i],aligned:aligned.payments[i]}));
- const history=borrower.history.slice(-12).map(r=>({...r,label:monthName(r.month),outflow:r.essentials+r.obligations}));
- function notify(message:string){setToast(message);setTimeout(()=>setToast(''),4500);}
- function go(next:string){setTab(next);setMenu(false);window.scrollTo({top:0,behavior:'smooth'});}
- function choose(id:string){setSelected(id);setShock(0);setBuffer(2000);setConsent(false);setVerification(null);}
- async function commit(kind:string,actor:string,payload:Record<string,unknown>,nextSnapshots=saved.snapshots){
-  if(busy)return;setBusy(true);
-  try{if(!await verify(saved.events))throw new Error('Audit verification failed. Export your records and reset the demo before continuing.');const events=await append(saved.events,kind,actor,payload);const next={events,snapshots:nextSnapshots};localStorage.setItem('tideplan-v1',JSON.stringify(next));setSaved(next);setVerification(null);notify(kind+' recorded.');}catch(e){notify((e as Error).message);}finally{setBusy(false);}
- }
- async function approve(){
-  if(!aligned.feasible)return;
-  const next:Snapshot={fingerprint,borrower:borrower.name,payments:aligned.payments,months:forecast.map(f=>f.month),buffer,shock,total:aligned.total,consented:false,reserveReleased:snapshot?.reserveReleased||0};
-  await commit('Plan approved','Demo lender',{borrowerId:selected,plan:next},{...saved.snapshots,[selected]:next});setConsent(false);
- }
- async function accept(){if(!current||!consent||snapshot?.consented)return;await commit('Borrower consent','Demo borrower',{borrowerId:selected,planFingerprint:fingerprint,total:snapshot.total},{...saved.snapshots,[selected]:{...snapshot,consented:true}});}
- async function release(){if(!current||!snapshot?.consented||!shock||snapshot.reserveReleased>=borrower.reserve)return;const amount=Math.min(1000,borrower.reserve-snapshot.reserveReleased);await commit('Reserve grant simulated','Demo guarantor',{borrowerId:selected,amount,unit:'INR-equivalent demo units',reason:`Reviewed ${shock}% income-shock scenario`,planFingerprint:fingerprint},{...saved.snapshots,[selected]:{...snapshot,reserveReleased:snapshot.reserveReleased+amount}});}
- function exportReport(){download('tideplan-'+selected+'-report.json',JSON.stringify({disclosure:'Synthetic decision-support demo. No live AI, bank payment or blockchain execution.',borrower,assumptions:{buffer,shock,conservativeHaircut:0.15,interest:borrower.interest},analysis,plans,approvedSnapshot:snapshot||null,audit:saved.events},null,2));notify('Decision report exported.');}
- function upload(file?:File){if(!file)return;Papa.parse<Record<string,string>>(file,{header:true,skipEmptyLines:true,complete:result=>{try{if(result.errors.length)throw new Error('Unable to parse CSV. Check the headers and rows.');const rows=result.data.map(r=>({month:r.month,income:Number(r.income),essentials:Number(r.essentials),obligations:Number(r.obligations)}));if(result.data.some(r=>['month','income','essentials','obligations'].some(k=>r[k]===undefined||r[k]==='')))throw new Error('Required columns: month,income,essentials,obligations.');analyze({...borrower,history:rows},buffer,shock);setImported({...imported,[selected]:rows});notify(`Imported ${rows.length} monthly records. Previous approvals remain tied to their original data.`);}catch(e){notify((e as Error).message);}},error:()=>notify('Unable to read CSV.')});}
- const NavIcon=({name}:{name:string})=>name==='Overview'?<LayoutDashboard size={18}/>:name==='Plan studio'?<SlidersHorizontal size={18}/>:name==='Trust ledger'?<ShieldCheck size={18}/>:<BookOpen size={18}/>;
- const Metric=({label,value,detail,icon}:{label:string;value:string;detail:string;icon:React.ReactNode})=><div className="metric"><div className="metric-top">{label}<span>{icon}</span></div><strong>{value}</strong><small>{detail}</small></div>;
- const Evidence=()=> <section className="card insight"><div className="section-eyebrow"><Sparkles size={15}/> EVIDENCE BRIEF</div><h3>{analysis.signal==='Sustained decline'?'A change worth a conversation.':'A seasonal dip. A better-fitting plan.'}</h3><p>{explain(borrower,analysis,plans)}</p><div className="evidence-list">{analysis.evidence.slice(0,3).map((e,i)=><div key={e}><span>0{i+1}</span><p>{e}</p></div>)}</div><div className="fineprint"><Info size={14}/> Deterministic explanation · source-linked calculations</div></section>;
- const CashChart=()=> <section className="card chart-card"><div className="card-title"><div><span className="section-eyebrow">THE NEXT SIX MONTHS</span><h3>Room to repay</h3></div><span className="soft-tag">Conservative scenario</span></div><div className="chart"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={forecast} margin={{top:16,right:8,left:-10,bottom:0}}><defs><linearGradient id="capacity" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#9db9a1" stopOpacity={.45}/><stop offset="100%" stopColor="#9db9a1" stopOpacity={.04}/></linearGradient></defs><CartesianGrid vertical={false} stroke="#e9eeea" strokeDasharray="3 4"/><XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize:12,fill:'#84928a'}} dy={10}/><YAxis tickFormatter={v=>`${v/1000}k`} axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#84928a'}}/><Tooltip formatter={(v:number)=>money(v)} contentStyle={tips}/><Area isAnimationActive={false} type="monotone" dataKey="capacity" name="Safe capacity" stroke="#85a88c" strokeWidth={2} fill="url(#capacity)"/><Line isAnimationActive={false} type="monotone" dataKey="fixed" name="Fixed payment" stroke="#c39665" strokeWidth={2} strokeDasharray="5 5" dot={false}/><Line isAnimationActive={false} type="monotone" dataKey="aligned" name="Aligned payment" stroke="#245b4d" strokeWidth={3} dot={{r:4,fill:'#fff',strokeWidth:2}}/><Legend iconType="circle" wrapperStyle={{fontSize:11,paddingTop:20}}/></ComposedChart></ResponsiveContainer></div><p className="chart-caption">Capacity = conservative income − essentials − existing debt − protected buffer.</p></section>;
- return <div className="app-shell"><aside className={menu?'sidebar open':'sidebar'}><a href="#" className="brand" onClick={e=>{e.preventDefault();go('Overview');}}><span className="brand-mark"><Waves size={25}/></span>TidePlan<span className="brand-dot">®</span></a><div className="workspace"><span className="workspace-avatar">T</span><div>Community lending<small>Demonstration workspace</small></div></div><div className="nav-label">WORKSPACE</div><nav>{['Overview','Plan studio','Trust ledger','How it works'].map(name=><button key={name} onClick={()=>go(name)} className={tab===name?'nav-item active':'nav-item'}><NavIcon name={name}/>{name}{name==='Trust ledger'&&saved.events.length>0&&<span className="count">{saved.events.length}</span>}</button>)}</nav><div className="nav-label borrower-label">BORROWER STORIES <span>03</span></div><div className="borrowers">{borrowers.map(b=><button key={b.id} className={selected===b.id?'borrower active':'borrower'} onClick={()=>choose(b.id)}><span className="avatar" style={{background:b.color}}>{b.initials}</span><span>{b.name}<small>{b.occupation}</small></span>{selected===b.id&&<span className="selected-dot"/>}</button>)}</div><div className="sidebar-bottom"><div className="sdg"><Leaf size={19}/><span>Built for better livelihoods<small>Aligned with SDG 8</small></span></div><div className="profile"><div className="avatar dark">HC</div><div>Team Hardcoder<small>Research & demonstration</small></div></div></div></aside>
- <div className="main-shell"><header className="topbar"><div className="breadcrumbs"><button className="mobile-menu icon-button" aria-label="Toggle navigation" onClick={()=>setMenu(!menu)}><Menu size={20}/></button><span>Workspace</span><ChevronRight size={14}/><b>{tab}</b></div><div className="topbar-right"><span className="live-pill"><i/> Interactive prototype</span><span className="top-date">As of 30 Jun 2026</span><div className="avatar small">HC</div></div></header><main>
- <div className="page-heading"><div><div className="section-eyebrow">{tab==='Overview'?'A CLEARER VIEW OF FINANCIAL WELLBEING':tab==='Plan studio'?'DESIGN A PLAN THAT FITS':tab==='Trust ledger'?'EVERY AGREEMENT HAS A HISTORY':'THE THINKING BEHIND TIDEPLAN'}</div><h1>{tab==='Overview'?'See the person behind the payment.':tab==='Plan studio'?'Repayment, in rhythm with life.':tab==='Trust ledger'?'Confidence you can verify.':'Good decisions need good foundations.'}</h1><p>{tab==='Overview'?'Understand the cash flow. Protect the essentials. Find a fairer path forward.':tab==='Plan studio'?'Explore the trade-offs before a borrower makes a commitment.':tab==='Trust ledger'?'Inspect consent, plan versions and the decisions that connect them.':'A transparent model, a practical workflow, and a clearly defined trust boundary.'}</p></div><button className="button secondary export-btn" onClick={exportReport}><Download size={15}/> Export report</button></div>
- {tab!=='How it works'&&<section className="borrower-banner"><div className="borrower-banner-main"><div className="avatar big" style={{background:borrower.color}}>{borrower.initials}</div><div><h2>{borrower.name}<span className={analysis.signal==='Sustained decline'?'badge amber':'badge'}>{analysis.signal==='Sustained decline'?<AlertTriangle size={12}/>:<Activity size={12}/>} {analysis.signal}</span></h2><p>{borrower.occupation}<span>·</span>{borrower.location}<span>·</span>TP-{borrower.id.toUpperCase()}-026</p></div></div><div className="banner-meta"><small>DATA COVERAGE</small><b>{borrower.history.length} months <span> / {imported[selected]?'CSV imported':'synthetic'}</span></b></div></section>}
- {tab==='Overview'&&<><div className="metrics"><Metric label="Remaining obligation" value={money(borrower.principal)} detail="6 months · zero-interest demo loan" icon={<Wallet size={18}/>}/><Metric label="Protected each month" value={money(buffer)} detail="After essentials and existing debt" icon={<ShieldCheck size={18}/>}/><Metric label="Buffer-breach months" value={`${fixed.stress} → ${aligned.stress}`} detail="Fixed versus cash-flow aligned" icon={<CalendarDays size={18}/>}/><Metric label="Amount scheduled" value={money(aligned.total)} detail={aligned.feasible?'100% of remaining obligation':`${money(aligned.unmet)} remains unscheduled`} icon={<TrendingUp size={18}/>}/></div><div className="overview-grid"><CashChart/><Evidence/></div><div className="bottom-grid"><section className="card history-card"><div className="card-title"><div><span className="section-eyebrow">A LITTLE CONTEXT GOES A LONG WAY</span><h3>One year, many income rhythms</h3></div><span className="soft-tag">Historical income</span></div><div className="history-chart"><ResponsiveContainer width="100%" height="100%"><BarChart data={history}><CartesianGrid vertical={false} stroke="#edf0ed"/><XAxis dataKey="label" axisLine={false} tickLine={false} tick={{fontSize:10,fill:'#84928a'}}/><Tooltip formatter={(v:number)=>money(v)} contentStyle={tips}/><Bar isAnimationActive={false} dataKey="income" fill="#9cb9a4" radius={[4,4,0,0]} name="Income"/><Bar isAnimationActive={false} dataKey="outflow" fill="#e6dccd" radius={[4,4,0,0]} name="Essentials + existing debt"/></BarChart></ResponsiveContainer></div></section><section className="next-card"><div className="round-icon"><SlidersHorizontal size={22}/></div><span className="section-eyebrow">FROM UNDERSTANDING TO ACTION</span><h3>A better calendar.<br/>The same commitment.</h3><p>{borrower.story}</p><button className="button cream" onClick={()=>go('Plan studio')}>Explore repayment plans <ArrowRight size={16}/></button></section></div></>}
- {tab==='Plan studio'&&<><div className="studio-top"><section className="card assumptions"><div className="card-title"><div><span className="section-eyebrow">YOUR ASSUMPTIONS, VISIBLE</span><h3>Make room for uncertainty</h3></div><SlidersHorizontal size={20}/></div><div className="slider-label"><label htmlFor="buffer">Monthly safety buffer</label><b>{money(buffer)}</b></div><input id="buffer" type="range" min="0" max="6000" step="500" value={buffer} onChange={e=>setBuffer(+e.target.value)}/><p>Cash protected after living costs and existing obligations.</p><div className="slider-label"><label htmlFor="shock">What if income falls?</label><b>{shock}%</b></div><input id="shock" type="range" min="0" max="60" step="5" value={shock} onChange={e=>setShock(+e.target.value)}/><p>A six-month shock applied on top of the conservative forecast.</p><div className="assumption-note"><Info size={16}/><span>No extra fees. No term extension. Forecasts are scenarios, not guarantees.</span></div></section><CashChart/></div><div className="plan-cards">{plans.map((p,i)=><section className={'card plan-card '+(i?'recommended':'')} key={p.name}><div className="card-title"><h3>{p.name}</h3><span className={i?'badge':'soft-tag'}>{i?'Capacity-constrained':'Current baseline'}</span></div><div className="plan-big">{money(p.total)}<small>scheduled over 6 months</small></div><div className="plan-details"><span>Months below protected buffer<b className={p.stress?'text-amber':'text-green'}>{p.stress}</b></span><span>Unscheduled obligation<b>{money(p.unmet)}</b></span><span>Total forecast buffer shortfall<b>{money(p.shortfall)}</b></span><span>Interest / added fees<b>₹0 / ₹0</b></span></div>{i&&<p className={p.feasible?'plan-verdict':'plan-verdict warning'}>{p.feasible?<CheckCircle2 size={17}/>:<AlertTriangle size={17}/>} {p.feasible?'Full obligation fits the scenario. Review before approval.':'Insufficient capacity. Human intervention required.'}</p>}</section>)}</div><section className="card schedule"><div className="card-title"><div><span className="section-eyebrow">EVERY MONTH ACCOUNTED FOR</span><h3>The proposed repayment calendar</h3></div><button className="text-button" onClick={()=>download('tideplan-schedule.csv','month,conservative_income,safe_capacity,fixed_payment,aligned_payment\n'+forecast.map(f=>[f.month,f.conservative,f.capacity,f.fixed,f.aligned].join(',')).join('\n'),'text/csv')}><Download size={14}/> Download CSV</button></div><div className="table-wrap"><table><thead><tr><th>Month</th><th>Conservative income</th><th>Safe capacity</th><th>Fixed payment</th><th>Aligned payment</th><th>After payment*</th></tr></thead><tbody>{forecast.map(f=><tr key={f.month}><td><b>{monthName(f.month)}</b> {f.month.slice(0,4)}</td><td>{money(f.conservative)}</td><td>{money(f.capacity)}</td><td className={f.fixed>f.capacity?'text-amber':''}>{money(f.fixed)}</td><td className="payment-cell">{money(f.aligned)}</td><td>{money(f.conservative-f.essentials-f.obligations-f.aligned)}</td></tr>)}</tbody></table></div><p className="chart-caption">*Cash after conservative income, essentials, other debts and the aligned payment. Monthly flows only; no carried-forward savings assumed.</p></section><div className="approval-row"><div><h3>{!aligned.feasible?'Let’s find another path.':current?(snapshot.consented?'Both parties have agreed.':'Lender approved. Borrower consent next.'):'Ready for a considered decision?'}</h3><p>{!aligned.feasible?'An extension, borrower check-in or additional support requires a separate assessment.':'Approvals are bound to this exact data, buffer, shock and payment schedule.'}</p></div><button className="button primary" disabled={!aligned.feasible||busy||!!current} onClick={approve}>{current?<Check size={17}/>:<FileCheck2 size={17}/>} {current?'Plan approved':'Approve as demo lender'}</button></div>{current&&!snapshot.consented&&<section className="consent-panel"><div><h3>Your choice, clearly explained.</h3><p>As the demo borrower, you are accepting {money(snapshot.total)} over six months, with no added interest or fees. You can review every monthly amount above.</p><label className="checkbox"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/> I have reviewed the amounts and accept this demo schedule.</label></div><button className="button primary" onClick={accept} disabled={!consent||busy}>Accept as demo borrower <ArrowRight size={16}/></button></section>}<div className="data-tools"><label className="button secondary"><Upload size={15}/> Import monthly CSV<input type="file" accept=".csv" onChange={e=>{upload(e.target.files?.[0]);e.target.value='';}} hidden/></label><button className="text-button" onClick={()=>download('tideplan-template.csv','month,income,essentials,obligations\n'+borrower.history.map(r=>[r.month,r.income,r.essentials,r.obligations].join(',')).join('\n'),'text/csv')}>Download sample data</button><span>12–60 consecutive monthly records · processed in your browser</span></div></>}
- {tab==='Trust ledger'&&<><div className="trust-intro"><ShieldCheck size={26}/><div><h3>Promises with a paper trail.</h3><p>This demo uses a local SHA-256 hash chain. It detects edited records, but is not an independently operated blockchain. Fabric and escrow contract blueprints are included in the repository.</p></div><span className="badge">LOCAL SIMULATION</span></div><div className="trust-grid"><section className="card"><div className="card-title"><h3>Agreement status</h3><LockKeyhole size={18}/></div><div className="steps"><div className={snapshot?'done':''}><span>1</span><section><b>Lender approval</b><p>{snapshot?`${money(snapshot.total)} · approved schedule recorded`:'No plan approved yet'}</p></section></div><div className={snapshot?.consented?'done':''}><span>2</span><section><b>Borrower consent</b><p>{snapshot?.consented?'Explicit acceptance recorded':'Awaiting an informed choice'}</p></section></div><div className={snapshot?.consented?'done':''}><span>3</span><section><b>Verifiable history</b><p>{saved.events.length} events linked by cryptographic fingerprints</p></section></div></div>{snapshot&&!current&&<p className="notice">Your current scenario differs from the approved snapshot. Re-approve in Plan studio to adopt it.</p>}<button className="text-button" onClick={()=>go('Plan studio')}>Review repayment calendar <ArrowRight size={15}/></button></section><section className="card reserve"><div className="card-title"><h3>Resilience reserve</h3><span className="soft-tag">Simulated grant</span></div><div className="reserve-value">{money(borrower.reserve-(snapshot?.reserveReleased||0))}<small>of {money(borrower.reserve)} demo units available</small></div><div className="progress-track"><div style={{width:`${100*(1-(snapshot?.reserveReleased||0)/borrower.reserve)}%`}}/></div><p>Lender-funded support for a reviewed income-shock scenario. No borrower savings are locked. Demo grants do not move money or change the displayed loan schedule.</p><button className="button secondary" onClick={release} disabled={busy||!current||!snapshot?.consented||shock===0||snapshot.reserveReleased>=borrower.reserve}>Authorize ₹1,000 demo grant <ArrowUpRight size={16}/></button><small>Requires a current consented plan and an income-shock scenario.</small></section></div><section className="card audit"><div className="card-title"><div><span className="section-eyebrow">APPEND-ONLY DECISION HISTORY</span><h3>Follow the evidence</h3></div><button className="button secondary" onClick={async()=>setVerification(await verify(saved.events)?'All recorded hashes and links verified.':'Integrity check failed: at least one record was modified.')}><ShieldCheck size={15}/> Verify chain</button></div>{verification&&<div className="verification"><CheckCircle2 size={18}/>{verification}</div>}{saved.events.length===0?<div className="empty"><FileCheck2 size={32}/><h3>The first agreement starts the story.</h3><p>Approve a plan in Plan studio to create your first verifiable event.</p><button className="button primary" onClick={()=>go('Plan studio')}>Open Plan studio <ArrowRight size={15}/></button></div>:<div className="audit-events">{[...saved.events].reverse().map(e=><div className="audit-event" key={e.id}><div className="event-node"><Check size={14}/></div><div><div className="event-heading"><b>{e.kind}</b><span>#{String(e.id).padStart(3,'0')}</span></div><p>{e.actor} · {String(e.payload.borrowerId)} · {new Date(e.time).toLocaleTimeString()}</p><code>SHA-256 {e.hash.slice(0,40)}…</code><details><summary>Inspect recorded evidence</summary><pre>{JSON.stringify(e.payload,null,2)}</pre></details></div></div>)}</div>}<div className="audit-footer"><button className="text-button" onClick={()=>download('tideplan-audit.json',JSON.stringify(saved.events,null,2))}><Download size={14}/> Export evidence</button><button className="text-button" onClick={async()=>{if(!saved.events.length){notify('Create a plan event first.');return;}const copy=structuredClone(saved.events);copy[0].payload={...copy[0].payload,total:1};notify(await verify(copy)?'Unexpected verification result.':'Tampered copy rejected. Your original records are unchanged.');}}>Test a tampered copy <Link2 size={14}/></button></div></section></>}
- {tab==='How it works'&&<><section className="method-hero"><span className="section-eyebrow">THE IDEA</span><h2>Income has a rhythm.<br/>Repayment should listen.</h2><p>Asha can repay over the season. A rigid due date can still put her under pressure. TidePlan makes the timing visible, compares alternatives and records the agreement.</p><div className="method-tags"><span>Borrower affordability</span><span>Lender visibility</span><span>Human authority</span></div></section><div className="method-grid">{[{n:'01',title:'Understand the pattern',text:'Read 12–60 months of income, essentials and existing obligations. Compare the latest three months with their year-earlier counterparts.'},{n:'02',title:'Protect the essentials',text:'Estimate each future month from matching historical months. Apply a 15% conservative haircut, an optional shock and the chosen safety buffer.'},{n:'03',title:'Compare real trade-offs',text:'Distribute the remaining obligation proportionally across available monthly capacities. Preserve exact integer totals and show any unscheduled amount.'},{n:'04',title:'Agree and verify',text:'Record lender approval and borrower consent against the exact scenario. Hash-link events locally and export the evidence for independent inspection.'}].map(x=><section className="card method-card" key={x.n}><span>{x.n}</span><h3>{x.title}</h3><p>{x.text}</p></section>)}</div><section className="card disclosure"><h3>What this prototype actually does</h3><div className="disclosure-grid"><div><h4>Working today</h4><p>Computed forecasts and schedules, adjustable stress tests, CSV import, explicit consent, persistent local audit trail, tamper detection and simulated reserve grants.</p></div><div><h4>Transparent boundaries</h4><p>All sample data is synthetic. The 15% haircut is a scenario assumption, not a probability estimate. Explanations use deterministic templates; no live LLM is called. The Fabric chaincode and Solidity escrow are separate integration blueprints, not connected to this demo.</p></div><div><h4>Measuring success</h4><p>Buffer-breach months, unscheduled obligation, total forecast shortfall and total cost. We do not claim validated default probabilities or improved real-world recovery.</p></div><div><h4>SDG 8</h4><p>Supports the intent of target 8.10: expanding access to financial services. Fair repayment timing can help protect working capital and productive livelihoods; these are intended outcomes to validate.</p></div></div></section><div className="data-tools"><a className="button secondary" href="https://github.com/Preethesh16/Tideplan" target="_blank" rel="noreferrer">Explore the source <ExternalLink size={15}/></a><button className="text-button" onClick={()=>{if(window.confirm('Reset all local demo approvals and evidence?')){localStorage.removeItem('tideplan-v1');setSaved(initial);setImported({});setShock(0);setBuffer(2000);notify('Local demo reset.');}}}><RotateCcw size={14}/> Reset local demo</button></div></>}
- <footer><span><Waves size={16}/> TidePlan <b> / </b> Repayment in rhythm with life.</span><small>Synthetic data · Human-reviewed decisions · No real funds</small></footer></main></div>{toast&&<div className="toast" role="status"><Info size={18}/>{toast}<button aria-label="Dismiss notification" onClick={()=>setToast('')}><X size={14}/></button></div>}</div>;
+export default function App() {
+  const [tab, setTab] = useState("Overview"),
+    [selected, setSelected] = useState("asha"),
+    [buffer, setBuffer] = useState(2000),
+    [shock, setShock] = useState(0),
+    [imported, setImported] = useState<Record<string, Month[]>>({}),
+    [saved, setSaved] = useState<Saved>(load),
+    [toast, setToast] = useState(""),
+    [busy, setBusy] = useState(false),
+    [verification, setVerification] = useState<string | null>(null),
+    [menu, setMenu] = useState(false),
+    [consent, setConsent] = useState(false);
+  const original = borrowers.find((x) => x.id === selected)!;
+  const borrower: Borrower = useMemo(
+    () => ({ ...original, history: imported[selected] || original.history }),
+    [original, imported, selected],
+  );
+  const analysis = useMemo(
+    () => analyze(borrower, buffer, shock),
+    [borrower, buffer, shock],
+  );
+  const plans = useMemo(
+    () => buildPlans(borrower, analysis, buffer),
+    [borrower, analysis, buffer],
+  );
+  const [fixed, aligned] = plans;
+  const fingerprint = JSON.stringify({
+    borrower: borrower.id,
+    history: borrower.history,
+    buffer,
+    shock,
+    payments: aligned.payments,
+    total: aligned.total,
+  });
+  const snapshot = saved.snapshots[selected];
+  const current = snapshot?.fingerprint === fingerprint;
+  const forecast = analysis.forecast.map((f, i) => ({
+    ...f,
+    label: monthName(f.month),
+    fixed: fixed.payments[i],
+    aligned: aligned.payments[i],
+  }));
+  const history = borrower.history
+    .slice(-12)
+    .map((r) => ({
+      ...r,
+      label: monthName(r.month),
+      outflow: r.essentials + r.obligations,
+    }));
+  function notify(message: string) {
+    setToast(message);
+    setTimeout(() => setToast(""), 4500);
+  }
+  function go(next: string) {
+    setTab(next);
+    setMenu(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  function choose(id: string) {
+    setSelected(id);
+    setShock(0);
+    setBuffer(2000);
+    setConsent(false);
+    setVerification(null);
+  }
+  async function commit(
+    kind: string,
+    actor: string,
+    payload: Record<string, unknown>,
+    nextSnapshots = saved.snapshots,
+  ) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (!(await verify(saved.events)))
+        throw new Error(
+          "Audit verification failed. Export your records and reset the demo before continuing.",
+        );
+      const events = await append(saved.events, kind, actor, payload);
+      const next = { events, snapshots: nextSnapshots };
+      localStorage.setItem("tideplan-v1", JSON.stringify(next));
+      setSaved(next);
+      setVerification(null);
+      notify(kind + " recorded.");
+    } catch (e) {
+      notify((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function approve() {
+    if (!aligned.feasible) return;
+    const next: Snapshot = {
+      fingerprint,
+      borrower: borrower.name,
+      payments: aligned.payments,
+      months: forecast.map((f) => f.month),
+      buffer,
+      shock,
+      total: aligned.total,
+      consented: false,
+      reserveReleased: snapshot?.reserveReleased || 0,
+    };
+    await commit(
+      "Plan approved",
+      "Demo lender",
+      { borrowerId: selected, plan: next },
+      { ...saved.snapshots, [selected]: next },
+    );
+    setConsent(false);
+  }
+  async function accept() {
+    if (!current || !consent || snapshot?.consented) return;
+    await commit(
+      "Borrower consent",
+      "Demo borrower",
+      {
+        borrowerId: selected,
+        planFingerprint: fingerprint,
+        total: snapshot.total,
+      },
+      { ...saved.snapshots, [selected]: { ...snapshot, consented: true } },
+    );
+  }
+  async function release() {
+    if (
+      !current ||
+      !snapshot?.consented ||
+      !shock ||
+      snapshot.reserveReleased >= borrower.reserve
+    )
+      return;
+    const amount = Math.min(1000, borrower.reserve - snapshot.reserveReleased);
+    await commit(
+      "Reserve grant simulated",
+      "Demo guarantor",
+      {
+        borrowerId: selected,
+        amount,
+        unit: "INR-equivalent demo units",
+        reason: `Reviewed ${shock}% income-shock scenario`,
+        planFingerprint: fingerprint,
+      },
+      {
+        ...saved.snapshots,
+        [selected]: {
+          ...snapshot,
+          reserveReleased: snapshot.reserveReleased + amount,
+        },
+      },
+    );
+  }
+  function exportReport() {
+    download(
+      "tideplan-" + selected + "-report.json",
+      JSON.stringify(
+        {
+          disclosure:
+            "Synthetic decision-support demo. No live AI, bank payment or blockchain execution.",
+          borrower,
+          assumptions: {
+            buffer,
+            shock,
+            conservativeHaircut: 0.15,
+            interest: borrower.interest,
+          },
+          analysis,
+          plans,
+          approvedSnapshot: snapshot || null,
+          audit: saved.events,
+        },
+        null,
+        2,
+      ),
+    );
+    notify("Decision report exported.");
+  }
+  function upload(file?: File) {
+    if (!file) return;
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        try {
+          if (result.errors.length)
+            throw new Error("Unable to parse CSV. Check the headers and rows.");
+          const rows = result.data.map((r) => ({
+            month: r.month,
+            income: Number(r.income),
+            essentials: Number(r.essentials),
+            obligations: Number(r.obligations),
+          }));
+          if (
+            result.data.some((r) =>
+              ["month", "income", "essentials", "obligations"].some(
+                (k) => r[k] === undefined || r[k] === "",
+              ),
+            )
+          )
+            throw new Error(
+              "Required columns: month,income,essentials,obligations.",
+            );
+          analyze({ ...borrower, history: rows }, buffer, shock);
+          setImported({ ...imported, [selected]: rows });
+          notify(
+            `Imported ${rows.length} monthly records. Previous approvals remain tied to their original data.`,
+          );
+        } catch (e) {
+          notify((e as Error).message);
+        }
+      },
+      error: () => notify("Unable to read CSV."),
+    });
+  }
+  const NavIcon = ({ name }: { name: string }) =>
+    name === "Overview" ? (
+      <LayoutDashboard size={18} />
+    ) : name === "Plan studio" ? (
+      <SlidersHorizontal size={18} />
+    ) : name === "Trust ledger" ? (
+      <ShieldCheck size={18} />
+    ) : (
+      <BookOpen size={18} />
+    );
+  const Metric = ({
+    label,
+    value,
+    detail,
+    icon,
+  }: {
+    label: string;
+    value: string;
+    detail: string;
+    icon: React.ReactNode;
+  }) => (
+    <div className="metric">
+      <div className="metric-top">
+        {label}
+        <span>{icon}</span>
+      </div>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </div>
+  );
+  const Evidence = () => (
+    <section className="card insight">
+      <div className="section-eyebrow">
+        <Sparkles size={15} /> EVIDENCE BRIEF
+      </div>
+      <h3>
+        {analysis.signal === "Sustained decline"
+          ? "A change worth a conversation."
+          : analysis.signal === "Seasonal pattern"
+            ? "A seasonal dip. A better-fitting plan."
+            : "A clear view. A better-fitting plan."}
+      </h3>
+      <p>{explain(borrower, analysis, plans)}</p>
+      <div className="evidence-list">
+        {analysis.evidence.slice(0, 3).map((e, i) => (
+          <div key={e}>
+            <span>0{i + 1}</span>
+            <p>{e}</p>
+          </div>
+        ))}
+      </div>
+      <div className="fineprint">
+        <Info size={14} /> Deterministic explanation · source-linked
+        calculations
+      </div>
+    </section>
+  );
+  const CashChart = () => (
+    <section className="card chart-card">
+      <div className="card-title">
+        <div>
+          <span className="section-eyebrow">THE NEXT SIX MONTHS</span>
+          <h3>Room to repay</h3>
+        </div>
+        <span className="soft-tag">Conservative scenario</span>
+      </div>
+      <div className="chart">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart
+            data={forecast}
+            margin={{ top: 16, right: 8, left: -10, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="capacity" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#9db9a1" stopOpacity={0.45} />
+                <stop offset="100%" stopColor="#9db9a1" stopOpacity={0.04} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid
+              vertical={false}
+              stroke="#e9eeea"
+              strokeDasharray="3 4"
+            />
+            <XAxis
+              dataKey="label"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 12, fill: "#84928a" }}
+              dy={10}
+            />
+            <YAxis
+              tickFormatter={(v) => `${v / 1000}k`}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fontSize: 11, fill: "#84928a" }}
+            />
+            <Tooltip formatter={(v: number) => money(v)} contentStyle={tips} />
+            <Area
+              isAnimationActive={false}
+              type="monotone"
+              dataKey="capacity"
+              name="Safe capacity"
+              stroke="#85a88c"
+              strokeWidth={2}
+              fill="url(#capacity)"
+            />
+            <Line
+              isAnimationActive={false}
+              type="monotone"
+              dataKey="fixed"
+              name="Fixed payment"
+              stroke="#c39665"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={false}
+            />
+            <Line
+              isAnimationActive={false}
+              type="monotone"
+              dataKey="aligned"
+              name="Aligned payment"
+              stroke="#245b4d"
+              strokeWidth={3}
+              dot={{ r: 4, fill: "#fff", strokeWidth: 2 }}
+            />
+            <Legend
+              iconType="circle"
+              wrapperStyle={{ fontSize: 11, paddingTop: 20 }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="chart-caption">
+        Capacity = conservative income − essentials − existing debt − protected
+        buffer.
+      </p>
+    </section>
+  );
+  return (
+    <div className="app-shell">
+      <aside className={menu ? "sidebar open" : "sidebar"}>
+        <a
+          href="#"
+          className="brand"
+          onClick={(e) => {
+            e.preventDefault();
+            go("Overview");
+          }}
+        >
+          <span className="brand-mark">
+            <Waves size={25} />
+          </span>
+          TidePlan
+        </a>
+        <div className="workspace">
+          <span className="workspace-avatar">T</span>
+          <div>
+            Community lending<small>Demonstration workspace</small>
+          </div>
+        </div>
+        <div className="nav-label">WORKSPACE</div>
+        <nav>
+          {["Overview", "Plan studio", "Trust ledger", "How it works"].map(
+            (name) => (
+              <button
+                key={name}
+                onClick={() => go(name)}
+                className={tab === name ? "nav-item active" : "nav-item"}
+              >
+                <NavIcon name={name} />
+                {name}
+                {name === "Trust ledger" && saved.events.length > 0 && (
+                  <span className="count">{saved.events.length}</span>
+                )}
+              </button>
+            ),
+          )}
+        </nav>
+        <div className="nav-label borrower-label">
+          BORROWER STORIES <span>03</span>
+        </div>
+        <div className="borrowers">
+          {borrowers.map((b) => (
+            <button
+              key={b.id}
+              className={selected === b.id ? "borrower active" : "borrower"}
+              onClick={() => choose(b.id)}
+            >
+              <span className="avatar" style={{ background: b.color }}>
+                {b.initials}
+              </span>
+              <span>
+                {b.name}
+                <small>{b.occupation}</small>
+              </span>
+              {selected === b.id && <span className="selected-dot" />}
+            </button>
+          ))}
+        </div>
+        <div className="sidebar-bottom">
+          <div className="sdg">
+            <Leaf size={19} />
+            <span>
+              Built for better livelihoods<small>Aligned with SDG 8</small>
+            </span>
+          </div>
+          <div className="profile">
+            <div className="avatar dark">VC</div>
+            <div>
+              Team Vibecoders<small>Research & demonstration</small>
+            </div>
+          </div>
+        </div>
+      </aside>
+      <div className="main-shell">
+        <header className="topbar">
+          <div className="breadcrumbs">
+            <button
+              className="mobile-menu icon-button"
+              aria-label="Toggle navigation"
+              onClick={() => setMenu(!menu)}
+            >
+              <Menu size={20} />
+            </button>
+            <span>Workspace</span>
+            <ChevronRight size={14} />
+            <b>{tab}</b>
+          </div>
+          <div className="topbar-right">
+            <span className="live-pill">
+              <i /> Interactive prototype
+            </span>
+            <span className="top-date">
+              {new Date(
+                borrower.history.at(-1)!.month + "-01T00:00:00Z",
+              ).toLocaleDateString("en-IN", {
+                month: "short",
+                year: "numeric",
+                timeZone: "UTC",
+              })}{" "}
+              data
+            </span>
+            <div className="avatar small">VC</div>
+          </div>
+        </header>
+        <main>
+          <div className="page-heading">
+            <div>
+              <div className="section-eyebrow">
+                {tab === "Overview"
+                  ? "A CLEARER VIEW OF FINANCIAL WELLBEING"
+                  : tab === "Plan studio"
+                    ? "DESIGN A PLAN THAT FITS"
+                    : tab === "Trust ledger"
+                      ? "EVERY AGREEMENT HAS A HISTORY"
+                      : "THE THINKING BEHIND TIDEPLAN"}
+              </div>
+              <h1>
+                {tab === "Overview"
+                  ? "See the person behind the payment."
+                  : tab === "Plan studio"
+                    ? "Repayment, in rhythm with life."
+                    : tab === "Trust ledger"
+                      ? "Confidence you can verify."
+                      : "Good decisions need good foundations."}
+              </h1>
+              <p>
+                {tab === "Overview"
+                  ? "Understand the cash flow. Protect the essentials. Find a fairer path forward."
+                  : tab === "Plan studio"
+                    ? "Explore the trade-offs before a borrower makes a commitment."
+                    : tab === "Trust ledger"
+                      ? "Inspect consent, plan versions and the decisions that connect them."
+                      : "A transparent model, a practical workflow, and a clearly defined trust boundary."}
+              </p>
+            </div>
+            <button
+              className="button secondary export-btn"
+              onClick={exportReport}
+            >
+              <Download size={15} /> Export report
+            </button>
+          </div>
+          {tab !== "How it works" && (
+            <section className="borrower-banner">
+              <div className="borrower-banner-main">
+                <div
+                  className="avatar big"
+                  style={{ background: borrower.color }}
+                >
+                  {borrower.initials}
+                </div>
+                <div>
+                  <h2>
+                    {borrower.name}
+                    <span
+                      className={
+                        analysis.signal === "Sustained decline"
+                          ? "badge amber"
+                          : "badge"
+                      }
+                    >
+                      {analysis.signal === "Sustained decline" ? (
+                        <AlertTriangle size={12} />
+                      ) : (
+                        <Activity size={12} />
+                      )}{" "}
+                      {analysis.signal}
+                    </span>
+                  </h2>
+                  <p>
+                    {borrower.occupation}
+                    <span>·</span>
+                    {borrower.location}
+                    <span>·</span>TP-{borrower.id.toUpperCase()}-026
+                  </p>
+                </div>
+              </div>
+              <div className="banner-meta">
+                <small>DATA COVERAGE</small>
+                <b>
+                  {borrower.history.length} months{" "}
+                  <span>
+                    {" "}
+                    / {imported[selected] ? "CSV imported" : "synthetic"}
+                  </span>
+                </b>
+              </div>
+            </section>
+          )}
+          {tab === "Overview" && (
+            <>
+              <div className="metrics">
+                <Metric
+                  label="Remaining obligation"
+                  value={money(borrower.principal)}
+                  detail="6 months · zero-interest demo loan"
+                  icon={<Wallet size={18} />}
+                />
+                <Metric
+                  label="Protected each month"
+                  value={money(buffer)}
+                  detail="After essentials and existing debt"
+                  icon={<ShieldCheck size={18} />}
+                />
+                <Metric
+                  label="Buffer-breach months"
+                  value={`${fixed.stress} → ${aligned.stress}`}
+                  detail="Fixed versus cash-flow aligned"
+                  icon={<CalendarDays size={18} />}
+                />
+                <Metric
+                  label="Amount scheduled"
+                  value={money(aligned.total)}
+                  detail={
+                    aligned.feasible
+                      ? "100% of remaining obligation"
+                      : `${money(aligned.unmet)} remains unscheduled`
+                  }
+                  icon={<TrendingUp size={18} />}
+                />
+              </div>
+              <div className="overview-grid">
+                <CashChart />
+                <Evidence />
+              </div>
+              <div className="bottom-grid">
+                <section className="card history-card">
+                  <div className="card-title">
+                    <div>
+                      <span className="section-eyebrow">
+                        A LITTLE CONTEXT GOES A LONG WAY
+                      </span>
+                      <h3>One year, many income rhythms</h3>
+                    </div>
+                    <span className="soft-tag">Historical income</span>
+                  </div>
+                  <div className="history-chart">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={history}>
+                        <CartesianGrid vertical={false} stroke="#edf0ed" />
+                        <XAxis
+                          dataKey="label"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: "#84928a" }}
+                        />
+                        <Tooltip
+                          formatter={(v: number) => money(v)}
+                          contentStyle={tips}
+                        />
+                        <Bar
+                          isAnimationActive={false}
+                          dataKey="income"
+                          fill="#9cb9a4"
+                          radius={[4, 4, 0, 0]}
+                          name="Income"
+                        />
+                        <Bar
+                          isAnimationActive={false}
+                          dataKey="outflow"
+                          fill="#e6dccd"
+                          radius={[4, 4, 0, 0]}
+                          name="Essentials + existing debt"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </section>
+                <section className="next-card">
+                  <div className="round-icon">
+                    <SlidersHorizontal size={22} />
+                  </div>
+                  <span className="section-eyebrow">
+                    FROM UNDERSTANDING TO ACTION
+                  </span>
+                  <h3>
+                    A better calendar.
+                    <br />
+                    The same commitment.
+                  </h3>
+                  <p>{borrower.story}</p>
+                  <button
+                    className="button cream"
+                    onClick={() => go("Plan studio")}
+                  >
+                    Explore repayment plans <ArrowRight size={16} />
+                  </button>
+                </section>
+              </div>
+            </>
+          )}
+          {tab === "Plan studio" && (
+            <>
+              <div className="studio-top">
+                <section className="card assumptions">
+                  <div className="card-title">
+                    <div>
+                      <span className="section-eyebrow">
+                        YOUR ASSUMPTIONS, VISIBLE
+                      </span>
+                      <h3>Make room for uncertainty</h3>
+                    </div>
+                    <SlidersHorizontal size={20} />
+                  </div>
+                  <div className="slider-label">
+                    <label htmlFor="buffer">Monthly safety buffer</label>
+                    <b>{money(buffer)}</b>
+                  </div>
+                  <input
+                    id="buffer"
+                    type="range"
+                    min="0"
+                    max="6000"
+                    step="500"
+                    value={buffer}
+                    onChange={(e) => setBuffer(+e.target.value)}
+                  />
+                  <p>
+                    Cash protected after living costs and existing obligations.
+                  </p>
+                  <div className="slider-label">
+                    <label htmlFor="shock">What if income falls?</label>
+                    <b>{shock}%</b>
+                  </div>
+                  <input
+                    id="shock"
+                    type="range"
+                    min="0"
+                    max="60"
+                    step="5"
+                    value={shock}
+                    onChange={(e) => setShock(+e.target.value)}
+                  />
+                  <p>
+                    A six-month shock applied on top of the conservative
+                    forecast.
+                  </p>
+                  <div className="assumption-note">
+                    <Info size={16} />
+                    <span>
+                      No extra fees. No term extension. Forecasts are scenarios,
+                      not guarantees.
+                    </span>
+                  </div>
+                </section>
+                <CashChart />
+              </div>
+              <div className="plan-cards">
+                {plans.map((p, i) => (
+                  <section
+                    className={"card plan-card " + (i ? "recommended" : "")}
+                    key={p.name}
+                  >
+                    <div className="card-title">
+                      <h3>{p.name}</h3>
+                      <span className={i ? "badge" : "soft-tag"}>
+                        {i ? "Capacity-constrained" : "Current baseline"}
+                      </span>
+                    </div>
+                    <div className="plan-big">
+                      {money(p.total)}
+                      <small>scheduled over 6 months</small>
+                    </div>
+                    <div className="plan-details">
+                      <span>
+                        Months below protected buffer
+                        <b className={p.stress ? "text-amber" : "text-green"}>
+                          {p.stress}
+                        </b>
+                      </span>
+                      <span>
+                        Unscheduled obligation<b>{money(p.unmet)}</b>
+                      </span>
+                      <span>
+                        Total forecast buffer shortfall
+                        <b>{money(p.shortfall)}</b>
+                      </span>
+                      <span>
+                        Interest / added fees<b>₹0 / ₹0</b>
+                      </span>
+                    </div>
+                    {i > 0 && (
+                      <p
+                        className={
+                          p.feasible ? "plan-verdict" : "plan-verdict warning"
+                        }
+                      >
+                        {p.feasible ? (
+                          <CheckCircle2 size={17} />
+                        ) : (
+                          <AlertTriangle size={17} />
+                        )}{" "}
+                        {p.feasible
+                          ? "Full obligation fits without buffer breaches. Review before approval."
+                          : "Unscheduled debt or a buffer shortfall. Human review required."}
+                      </p>
+                    )}
+                  </section>
+                ))}
+              </div>
+              <section className="card schedule">
+                <div className="card-title">
+                  <div>
+                    <span className="section-eyebrow">
+                      EVERY MONTH ACCOUNTED FOR
+                    </span>
+                    <h3>The proposed repayment calendar</h3>
+                  </div>
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      download(
+                        "tideplan-schedule.csv",
+                        "month,conservative_income,safe_capacity,fixed_payment,aligned_payment\n" +
+                          forecast
+                            .map((f) =>
+                              [
+                                f.month,
+                                f.conservative,
+                                f.capacity,
+                                f.fixed,
+                                f.aligned,
+                              ].join(","),
+                            )
+                            .join("\n"),
+                        "text/csv",
+                      )
+                    }
+                  >
+                    <Download size={14} /> Download CSV
+                  </button>
+                </div>
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Month</th>
+                        <th>Conservative income</th>
+                        <th>Safe capacity</th>
+                        <th>Fixed payment</th>
+                        <th>Aligned payment</th>
+                        <th>After payment*</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {forecast.map((f) => (
+                        <tr key={f.month}>
+                          <td>
+                            <b>{monthName(f.month)}</b> {f.month.slice(0, 4)}
+                          </td>
+                          <td>{money(f.conservative)}</td>
+                          <td>{money(f.capacity)}</td>
+                          <td
+                            className={f.fixed > f.capacity ? "text-amber" : ""}
+                          >
+                            {money(f.fixed)}
+                          </td>
+                          <td className="payment-cell">{money(f.aligned)}</td>
+                          <td>
+                            {money(
+                              f.conservative -
+                                f.essentials -
+                                f.obligations -
+                                f.aligned,
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="chart-caption">
+                  *Cash after conservative income, essentials, other debts and
+                  the aligned payment. Monthly flows only; no carried-forward
+                  savings assumed.
+                </p>
+              </section>
+              <div className="approval-row">
+                <div>
+                  <h3>
+                    {!aligned.feasible
+                      ? "Let’s find another path."
+                      : current
+                        ? snapshot.consented
+                          ? "Both parties have agreed."
+                          : "Lender approved. Borrower consent next."
+                        : "Ready for a considered decision?"}
+                  </h3>
+                  <p>
+                    {!aligned.feasible
+                      ? "An extension, borrower check-in or additional support requires a separate assessment."
+                      : "Approvals are bound to this exact data, buffer, shock and payment schedule."}
+                  </p>
+                </div>
+                <button
+                  className="button primary"
+                  disabled={!aligned.feasible || busy || !!current}
+                  onClick={approve}
+                >
+                  {current ? <Check size={17} /> : <FileCheck2 size={17} />}{" "}
+                  {current ? "Plan approved" : "Approve as demo lender"}
+                </button>
+              </div>
+              {current && !snapshot.consented && (
+                <section className="consent-panel">
+                  <div>
+                    <h3>Your choice, clearly explained.</h3>
+                    <p>
+                      As the demo borrower, you are accepting{" "}
+                      {money(snapshot.total)} over six months, with no added
+                      interest or fees. You can review every monthly amount
+                      above.
+                    </p>
+                    <label className="checkbox">
+                      <input
+                        type="checkbox"
+                        checked={consent}
+                        onChange={(e) => setConsent(e.target.checked)}
+                      />{" "}
+                      I have reviewed the amounts and accept this demo schedule.
+                    </label>
+                  </div>
+                  <button
+                    className="button primary"
+                    onClick={accept}
+                    disabled={!consent || busy}
+                  >
+                    Accept as demo borrower <ArrowRight size={16} />
+                  </button>
+                </section>
+              )}
+              <div className="data-tools">
+                <label className="button secondary">
+                  <Upload size={15} /> Import monthly CSV
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      upload(e.target.files?.[0]);
+                      e.target.value = "";
+                    }}
+                    hidden
+                  />
+                </label>
+                <button
+                  className="text-button"
+                  onClick={() =>
+                    download(
+                      "tideplan-template.csv",
+                      "month,income,essentials,obligations\n" +
+                        borrower.history
+                          .map((r) =>
+                            [
+                              r.month,
+                              r.income,
+                              r.essentials,
+                              r.obligations,
+                            ].join(","),
+                          )
+                          .join("\n"),
+                      "text/csv",
+                    )
+                  }
+                >
+                  Download sample data
+                </button>
+                <span>
+                  12–60 consecutive monthly records · processed in your browser
+                </span>
+              </div>
+            </>
+          )}
+          {tab === "Trust ledger" && (
+            <>
+              <div className="trust-intro">
+                <ShieldCheck size={26} />
+                <div>
+                  <h3>Promises with a paper trail.</h3>
+                  <p>
+                    This demo uses a local SHA-256 hash chain. It detects edited
+                    records, but is not an independently operated blockchain.
+                    Fabric and escrow contract blueprints are included in the
+                    repository.
+                  </p>
+                </div>
+                <span className="badge">LOCAL SIMULATION</span>
+              </div>
+              <div className="trust-grid">
+                <section className="card">
+                  <div className="card-title">
+                    <h3>Agreement status</h3>
+                    <LockKeyhole size={18} />
+                  </div>
+                  <div className="steps">
+                    <div className={snapshot ? "done" : ""}>
+                      <span>1</span>
+                      <section>
+                        <b>Lender approval</b>
+                        <p>
+                          {snapshot
+                            ? `${money(snapshot.total)} · approved schedule recorded`
+                            : "No plan approved yet"}
+                        </p>
+                      </section>
+                    </div>
+                    <div className={snapshot?.consented ? "done" : ""}>
+                      <span>2</span>
+                      <section>
+                        <b>Borrower consent</b>
+                        <p>
+                          {snapshot?.consented
+                            ? "Explicit acceptance recorded"
+                            : "Awaiting an informed choice"}
+                        </p>
+                      </section>
+                    </div>
+                    <div className={snapshot?.consented ? "done" : ""}>
+                      <span>3</span>
+                      <section>
+                        <b>Verifiable history</b>
+                        <p>
+                          {saved.events.length} events linked by cryptographic
+                          fingerprints
+                        </p>
+                      </section>
+                    </div>
+                  </div>
+                  {snapshot && !current && (
+                    <p className="notice">
+                      Your current scenario differs from the approved snapshot.
+                      Re-approve in Plan studio to adopt it.
+                    </p>
+                  )}
+                  <button
+                    className="text-button"
+                    onClick={() => go("Plan studio")}
+                  >
+                    Review repayment calendar <ArrowRight size={15} />
+                  </button>
+                </section>
+                <section className="card reserve">
+                  <div className="card-title">
+                    <h3>Resilience reserve</h3>
+                    <span className="soft-tag">Simulated grant</span>
+                  </div>
+                  <div className="reserve-value">
+                    {money(borrower.reserve - (snapshot?.reserveReleased || 0))}
+                    <small>
+                      of {money(borrower.reserve)} demo units available
+                    </small>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      style={{
+                        width: `${100 * (1 - (snapshot?.reserveReleased || 0) / borrower.reserve)}%`,
+                      }}
+                    />
+                  </div>
+                  <p>
+                    Lender-funded support for a reviewed income-shock scenario.
+                    No borrower savings are locked. Demo grants do not move
+                    money or change the displayed loan schedule.
+                  </p>
+                  <button
+                    className="button secondary"
+                    onClick={release}
+                    disabled={
+                      busy ||
+                      !current ||
+                      !snapshot?.consented ||
+                      shock === 0 ||
+                      snapshot.reserveReleased >= borrower.reserve
+                    }
+                  >
+                    Authorize ₹1,000 demo grant <ArrowUpRight size={16} />
+                  </button>
+                  <small>
+                    Requires a current consented plan and an income-shock
+                    scenario.
+                  </small>
+                </section>
+              </div>
+              <section className="card audit">
+                <div className="card-title">
+                  <div>
+                    <span className="section-eyebrow">
+                      APPEND-ONLY DECISION HISTORY
+                    </span>
+                    <h3>Follow the evidence</h3>
+                  </div>
+                  <button
+                    className="button secondary"
+                    onClick={async () =>
+                      setVerification(
+                        (await verify(saved.events))
+                          ? "All recorded hashes and links verified."
+                          : "Integrity check failed: at least one record was modified.",
+                      )
+                    }
+                  >
+                    <ShieldCheck size={15} /> Verify chain
+                  </button>
+                </div>
+                {verification && (
+                  <div className="verification">
+                    <CheckCircle2 size={18} />
+                    {verification}
+                  </div>
+                )}
+                {saved.events.length === 0 ? (
+                  <div className="empty">
+                    <FileCheck2 size={32} />
+                    <h3>The first agreement starts the story.</h3>
+                    <p>
+                      Approve a plan in Plan studio to create your first
+                      verifiable event.
+                    </p>
+                    <button
+                      className="button primary"
+                      onClick={() => go("Plan studio")}
+                    >
+                      Open Plan studio <ArrowRight size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="audit-events">
+                    {[...saved.events].reverse().map((e) => (
+                      <div className="audit-event" key={e.id}>
+                        <div className="event-node">
+                          <Check size={14} />
+                        </div>
+                        <div>
+                          <div className="event-heading">
+                            <b>{e.kind}</b>
+                            <span>#{String(e.id).padStart(3, "0")}</span>
+                          </div>
+                          <p>
+                            {e.actor} · {String(e.payload.borrowerId)} ·{" "}
+                            {new Date(e.time).toLocaleTimeString()}
+                          </p>
+                          <code>SHA-256 {e.hash.slice(0, 40)}…</code>
+                          <details>
+                            <summary>Inspect recorded evidence</summary>
+                            <pre>{JSON.stringify(e.payload, null, 2)}</pre>
+                          </details>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="audit-footer">
+                  <button
+                    className="text-button"
+                    onClick={() =>
+                      download(
+                        "tideplan-audit.json",
+                        JSON.stringify(saved.events, null, 2),
+                      )
+                    }
+                  >
+                    <Download size={14} /> Export evidence
+                  </button>
+                  <button
+                    className="text-button"
+                    onClick={async () => {
+                      if (!saved.events.length) {
+                        notify("Create a plan event first.");
+                        return;
+                      }
+                      const copy = structuredClone(saved.events);
+                      copy[0].payload = { ...copy[0].payload, total: 1 };
+                      notify(
+                        (await verify(copy))
+                          ? "Unexpected verification result."
+                          : "Tampered copy rejected. Your original records are unchanged.",
+                      );
+                    }}
+                  >
+                    Test a tampered copy <Link2 size={14} />
+                  </button>
+                </div>
+              </section>
+            </>
+          )}
+          {tab === "How it works" && (
+            <>
+              <section className="method-hero">
+                <span className="section-eyebrow">THE IDEA</span>
+                <h2>
+                  Income has a rhythm.
+                  <br />
+                  Repayment should listen.
+                </h2>
+                <p>
+                  Asha can repay over the season. A rigid due date can still put
+                  her under pressure. TidePlan makes the timing visible,
+                  compares alternatives and records the agreement.
+                </p>
+                <div className="method-tags">
+                  <span>Borrower affordability</span>
+                  <span>Lender visibility</span>
+                  <span>Human authority</span>
+                </div>
+              </section>
+              <div className="method-grid">
+                {[
+                  {
+                    n: "01",
+                    title: "Understand the pattern",
+                    text: "Read 12–60 months of income, essentials and existing obligations. Compare the latest three months with their year-earlier counterparts.",
+                  },
+                  {
+                    n: "02",
+                    title: "Protect the essentials",
+                    text: "Estimate each future month from matching historical months. Apply a 15% conservative haircut, an optional shock and the chosen safety buffer.",
+                  },
+                  {
+                    n: "03",
+                    title: "Compare real trade-offs",
+                    text: "Distribute the remaining obligation proportionally across available monthly capacities. Preserve exact integer totals and show any unscheduled amount.",
+                  },
+                  {
+                    n: "04",
+                    title: "Agree and verify",
+                    text: "Record lender approval and borrower consent against the exact scenario. Hash-link events locally and export the evidence for independent inspection.",
+                  },
+                ].map((x) => (
+                  <section className="card method-card" key={x.n}>
+                    <span>{x.n}</span>
+                    <h3>{x.title}</h3>
+                    <p>{x.text}</p>
+                  </section>
+                ))}
+              </div>
+              <section className="card disclosure">
+                <h3>What this prototype actually does</h3>
+                <div className="disclosure-grid">
+                  <div>
+                    <h4>Working today</h4>
+                    <p>
+                      Computed forecasts and schedules, adjustable stress tests,
+                      CSV import, explicit consent, persistent local audit
+                      trail, tamper detection and simulated reserve grants.
+                    </p>
+                  </div>
+                  <div>
+                    <h4>Transparent boundaries</h4>
+                    <p>
+                      All sample data is synthetic. The 15% haircut is a
+                      scenario assumption, not a probability estimate.
+                      Explanations use deterministic templates; no live LLM is
+                      called. The Fabric chaincode and Solidity escrow are
+                      separate integration blueprints, not connected to this
+                      demo.
+                    </p>
+                  </div>
+                  <div>
+                    <h4>Measuring success</h4>
+                    <p>
+                      Buffer-breach months, unscheduled obligation, total
+                      forecast shortfall and total cost. We do not claim
+                      validated default probabilities or improved real-world
+                      recovery.
+                    </p>
+                  </div>
+                  <div>
+                    <h4>SDG 8</h4>
+                    <p>
+                      Supports the intent of target 8.10: expanding access to
+                      financial services. Fair repayment timing can help protect
+                      working capital and productive livelihoods; these are
+                      intended outcomes to validate.
+                    </p>
+                  </div>
+                </div>
+              </section>
+              <div className="data-tools">
+                <a
+                  className="button secondary"
+                  href="https://github.com/Preethesh16/Tideplan"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Explore the source <ExternalLink size={15} />
+                </a>
+                <button
+                  className="text-button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Reset all local demo approvals and evidence?",
+                      )
+                    ) {
+                      localStorage.removeItem("tideplan-v1");
+                      setSaved(initial);
+                      setImported({});
+                      setShock(0);
+                      setBuffer(2000);
+                      notify("Local demo reset.");
+                    }
+                  }}
+                >
+                  <RotateCcw size={14} /> Reset local demo
+                </button>
+              </div>
+            </>
+          )}
+          <footer>
+            <span>
+              <Waves size={16} /> TidePlan <b> / </b> Repayment in rhythm with
+              life.
+            </span>
+            <small>
+              Synthetic data · Human-reviewed decisions · No real funds
+            </small>
+          </footer>
+        </main>
+      </div>
+      {toast && (
+        <div className="toast" role="status">
+          <Info size={18} />
+          {toast}
+          <button
+            aria-label="Dismiss notification"
+            onClick={() => setToast("")}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }

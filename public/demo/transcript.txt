@@ -1,0 +1,41 @@
+The idea
+We are Team Vibecoders. Welcome to TidePlan: repayment, in rhythm with life. This is our working microloan cash-flow planning prototype. It asks a practical question: not just whether someone can repay, but when they can repay without sacrificing essential expenses. The demonstration uses synthetic records and does not move real money.
+
+Asha: timing versus ability
+We begin with Asha, a smallholder farmer. Twenty-four months of history reveal changing income across the year. Her remaining obligation is eighteen thousand rupees. With a two-thousand-rupee monthly buffer, equal payments cause two buffer breaches. Aligning payments with available capacity schedules the same total with no breaches in this scenario. The chart makes the timing mismatch visible.
+
+Explain the evidence
+The evidence brief explains the recommendation using the same calculations as the chart. It compares recent earnings with the previous year, identifies lean months, and shows the assumptions behind capacity. The historical chart separates income from essential expenses and existing debt. These are transparent rules, not an unexplained credit score or an AI-generated financial decision.
+
+Different livelihoods, different signals
+Meera, a shop owner, has a different pattern of earnings and repayment capacity. Ravi, a delivery partner, shows a sustained decline compared with the same months a year earlier. TidePlan flags this change for a conversation and exposes the shortfall. It does not explain every downturn away as seasonality or pretend that changing dates can solve every problem.
+
+Set the affordability assumptions
+Now open Plan studio. The protected buffer is money left after essential costs and existing debt. Raising it reduces the room available for repayments. The income-shock control asks what happens if earnings fall. A fifteen-percent conservative haircut is applied before scheduling. These are scenario assumptions, not guaranteed income or calibrated probabilities. Every change updates the chart and comparison.
+
+Demonstrate a safe failure
+At a sixty-percent income shock, the proposed schedule cannot cover the obligation. The app shows the unscheduled debt, the buffer shortfall, and a disabled approval button. Approval is also blocked when living costs breach the buffer even if the debt can be scheduled elsewhere. This is where a human review, additional support, or separately assessed loan restructuring is needed.
+
+Inspect every payment
+Returning to a five-percent shock gives us a manageable scenario for this demonstration. The comparison shows total scheduled debt, months below the buffer, and any remaining obligation. Below it, each month lists conservative income, safe capacity, fixed payments, aligned payments, and cash left afterward. The monthly schedule can be downloaded as a CSV for review outside the app.
+
+Bring and validate monthly records
+The prototype also accepts a monthly CSV. Download the sample to see the required columns: month, income, essentials, and obligations. Records must cover twelve to sixty consecutive months. Invalid files are rejected instead of silently producing a recommendation. Here we import the complete sample. Data is processed in this browser, and the selected loan amount stays unchanged.
+
+Lender approval and borrower choice
+Next, the demo lender approves the exact scenario. The borrower sees the total and monthly schedule, explicitly checks their acceptance, and confirms. A saved approval is bound to the underlying data, safety buffer, shock, and payments. These role buttons demonstrate the workflow; production authentication and independent identities remain future work. No financial commitment is made by this demo.
+
+Protect the agreed version
+Changing the safety buffer after acceptance makes this a different plan. The app no longer treats the old approval as approval of the new scenario. Return to the original assumptions and the accepted version is recognised again. This keeps an experimental what-if analysis separate from the schedule the borrower actually reviewed.
+
+Simulated resilience support
+The trust ledger brings the agreement together. Lender approval and borrower acceptance are recorded. A current, consented shock scenario can receive a simulated one-thousand-rupee sponsor grant, reducing the displayed reserve balance. The grant is capped by available demo funds. It neither transfers money nor silently changes the loan schedule. The reserve is support, not a lock on borrower savings.
+
+Verify and export evidence
+Every recorded event includes a cryptographic fingerprint and a link to the previous event. Verify the chain, inspect the recorded evidence, and export the audit history or complete decision report. We can test a deliberately modified copy: verification rejects it while the original remains unchanged. A local hash chain detects edits, but cannot stop the browser owner replacing the whole history.
+
+Architecture and honest boundaries
+The methodology page explains the complete pipeline. React and TypeScript power the interface and calculations. Recharts visualises the comparisons, and Papa Parse handles CSV input. GitHub Pages hosts the static app. Hyperledger Fabric and a sponsor reserve smart contract are separate integration blueprints, not connected infrastructure. No live language model or bank connection is required for this demonstration.
+
+A better-informed repayment decision
+TidePlan is designed for a focused pilot with lenders and borrower groups. We would measure affordability, forecast error, borrower costs, and recovery together, rather than claim success from a dashboard alone. The project supports the intent of Sustainable Development Goal eight: more inclusive financial services and stronger livelihoods. We are Team Vibecoders. Understand the cash flow, compare the options, agree clearly, and keep the evidence.

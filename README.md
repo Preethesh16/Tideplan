@@ -1,15 +1,18 @@
 <div align="center">
 
 # TidePlan
+
 ### Repayment, in rhythm with life.
 
 **A missed date is not always a missing ability to repay.**
 
 Cash-flow-aware microloan planning · Explicit borrower consent · Verifiable decision history
 
-[**Launch the interactive demo →**](https://preethesh16.github.io/Tideplan/) · [How it works](#the-decision-engine) · [Technology](#architecture--technology)
+[**Launch the interactive demo →**](https://preethesh16.github.io/Tideplan/) · [**Watch the narrated walkthrough →**](https://preethesh16.github.io/Tideplan/demo/) · [Technology](#architecture--technology) · [Validation](docs/VALIDATION.md)
 
-Built by **Team Hardcoder** · Problem: **Dynamic Microloan Repayment & Cash-Flow Planning** · **SDG 8**
+Built by **Team Vibecoders** · Problem: **Dynamic Microloan Repayment & Cash-Flow Planning** · **SDG 8**
+
+[![Test and publish demo](https://github.com/Preethesh16/Tideplan/actions/workflows/pages.yml/badge.svg)](https://github.com/Preethesh16/Tideplan/actions/workflows/pages.yml)
 
 </div>
 
@@ -36,20 +39,30 @@ TidePlan puts that question at the centre of a lender–borrower conversation. I
 5. **Open Trust ledger.** Simulate a ₹1,000 reserve grant, verify the event hashes, and test a tampered copy. Nothing moves on a payment network.
 6. **Switch to Ravi Kumar.** A sustained year-on-year decline is flagged for intervention—not explained away as seasonality.
 
-**Narrated recording: in progress, paused at the team's request.** The interactive demo is ready to explore. Recording and narration scripts are included under `scripts/`; the finished video is not published yet.
+## Watch the complete product walkthrough
+
+[![Watch TidePlan: actual browser interaction, from borrower overview to verified evidence](docs/images/demo-preview.gif)](https://preethesh16.github.io/Tideplan/demo/)
+
+**[Play with narration, English captions and chapter navigation →](https://preethesh16.github.io/Tideplan/demo/)**
+
+The recording starts at the overview and covers all three borrower profiles, explanations, buffer and shock controls, safe failure, monthly payments, CSV validation/import, lender approval, borrower acceptance, version changes, reserve support, tamper detection and evidence exports. It closes with the architecture and prototype boundaries.
+
+[Download MP4](https://preethesh16.github.io/Tideplan/demo/tideplan-demo.mp4) · [Read the transcript](https://preethesh16.github.io/Tideplan/demo/transcript.txt) · [Reproduce the recording](docs/DEMO.md)
+
+Actual screen recording, not a slideshow. Voiceover is AI-generated. The dedicated player avoids GitHub's unsupported MP4 source-file preview.
 
 ## One example, every rupee accounted for
 
 **Synthetic Asha scenario:** ₹18,000 obligation; ₹2,000 protected monthly buffer; ₹11,000 essentials and existing obligations; 15% conservative income haircut; no additional shock; zero interest.
 
-| Metric | Fixed schedule | TidePlan aligned schedule |
-|---|---:|---:|
-| Total scheduled | ₹18,000 | ₹18,000 |
-| Planning horizon | 6 months | 6 months |
-| Months below the protected buffer | 2 | 0 |
-| Total forecast buffer shortfall | ₹2,547 | ₹0 |
-| Lowest monthly cash after repayments | ₹306 | ₹2,850 |
-| Additional interest or fees | ₹0 | ₹0 |
+| Metric                               | Fixed schedule | TidePlan aligned schedule |
+| ------------------------------------ | -------------: | ------------------------: |
+| Total scheduled                      |        ₹18,000 |                   ₹18,000 |
+| Planning horizon                     |       6 months |                  6 months |
+| Months below the protected buffer    |              2 |                         0 |
+| Total forecast buffer shortfall      |         ₹2,547 |                        ₹0 |
+| Lowest monthly cash after repayments |           ₹306 |                    ₹2,850 |
+| Additional interest or fees          |             ₹0 |                        ₹0 |
 
 Aligned payments for July–December: **₹456 · ₹750 · ₹6,621 · ₹3,097 · ₹2,217 · ₹4,859**.
 
@@ -57,14 +70,14 @@ These are reproducible scenario outputs, **not measured improvements in real loa
 
 ## What makes TidePlan different
 
-| Design choice | Why it matters |
-|---|---|
-| Timing before labelling | Compares recent income with the same months a year earlier before flagging sustained decline. |
-| A visible affordability floor | Essentials, existing debts and the chosen buffer are deducted before allocating repayments. |
-| Alternatives, not one unexplained score | Shows exact payments, stress months, shortfalls and unscheduled debt side by side. |
-| Failure is a valid result | Insufficient capacity leads to a review—not a fabricated “affordable” schedule. |
-| Consent tied to a specific version | Changing the inputs invalidates the current approval match. A borrower accepts explicit amounts. |
-| Trust as evidence, not theatre | Local hash verification works today; consortium ledger and reserve contracts are clearly separated integration blueprints. |
+| Design choice                           | Why it matters                                                                                                             |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Timing before labelling                 | Compares recent income with the same months a year earlier before flagging sustained decline.                              |
+| A visible affordability floor           | Essentials, existing debts and the chosen buffer are deducted before allocating repayments.                                |
+| Alternatives, not one unexplained score | Shows exact payments, stress months, shortfalls and unscheduled debt side by side.                                         |
+| Failure is a valid result               | Insufficient capacity leads to a review—not a fabricated “affordable” schedule.                                            |
+| Consent tied to a specific version      | Changing the inputs invalidates the current approval match. A borrower accepts explicit amounts.                           |
+| Trust as evidence, not theatre          | Local hash verification works today; consortium ledger and reserve contracts are clearly separated integration blueprints. |
 
 ## Features that work today
 
@@ -104,6 +117,8 @@ capacity = max(0, conservative income − essentials − existing debt − safet
 6. Allocate the obligation proportionally across positive capacities, with exact integer rounding. Never allocate above monthly capacity. If aggregate capacity is insufficient, display the unscheduled amount.
 7. Compare both schedules, then require a human decision and explicit borrower acceptance.
 
+**Approval gate:** the aligned schedule must cover the full obligation **and** leave every forecast month at or above the chosen buffer. A month with insufficient living-cost coverage is not made safe merely by setting its repayment to zero.
+
 The current model does not carry savings between months, optimise interest-bearing amortisation, model joint household liabilities, or infer causal hardship. A zero repayment cannot eliminate a living-cost deficit; this remains visible as a buffer shortfall. The variation heuristic is not a validated seasonality classifier. Production work requires backtesting, uncertainty calibration and domain review.
 
 ## Architecture & technology
@@ -120,18 +135,18 @@ flowchart LR
     D -. separate blueprint .-> I[Sponsor-funded reserve contract]
 ```
 
-| Layer | Technology | Purpose / code |
-|---|---|---|
-| Interface | React 18 + TypeScript | Borrower views, controls and consent — [`src/App.tsx`](src/App.tsx) |
-| Visualisation | Recharts | Historical cash flow and schedule comparison — [`src/App.tsx`](src/App.tsx) |
-| Decision engine | TypeScript | Forecasts, constraints and transparent explanations — [`src/engine.ts`](src/engine.ts) |
-| Data | Synthetic fixtures + Papa Parse | Local CSV validation and ingestion — [`src/data.ts`](src/data.ts) |
-| Audit | Web Crypto SHA-256 + localStorage | Local event hashing and verification — [`src/trust.ts`](src/trust.ts) |
-| Styling | CSS + Lucide icons | Responsive, accessible controls — [`src/styles.css`](src/styles.css) |
-| Build / hosting | Vite + GitHub Actions + Pages | Static build, tests and publication — [workflow](.github/workflows/pages.yml) |
-| Tests | Node test runner + tsx + Playwright | Calculation invariants and browser journey — [`tests/`](tests/) |
-| Trust blueprint | Hyperledger Fabric chaincode, JavaScript | Organisation approval and identity-bound consent — [`contracts/fabric/`](contracts/fabric/) |
-| Reserve blueprint | Solidity | Consent-gated, capped sponsor releases — [`contracts/ResilienceReserve.sol`](contracts/ResilienceReserve.sol) |
+| Layer             | Technology                               | Purpose / code                                                                                                |
+| ----------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Interface         | React 18 + TypeScript                    | Borrower views, controls and consent — [`src/App.tsx`](src/App.tsx)                                           |
+| Visualisation     | Recharts                                 | Historical cash flow and schedule comparison — [`src/App.tsx`](src/App.tsx)                                   |
+| Decision engine   | TypeScript                               | Forecasts, constraints and transparent explanations — [`src/engine.ts`](src/engine.ts)                        |
+| Data              | Synthetic fixtures + Papa Parse          | Local CSV validation and ingestion — [`src/data.ts`](src/data.ts)                                             |
+| Audit             | Web Crypto SHA-256 + localStorage        | Local event hashing and verification — [`src/trust.ts`](src/trust.ts)                                         |
+| Styling           | CSS + Lucide icons                       | Responsive, accessible controls — [`src/styles.css`](src/styles.css)                                          |
+| Build / hosting   | Vite + GitHub Actions + Pages            | Static build, tests and publication — [workflow](.github/workflows/pages.yml)                                 |
+| Tests             | Node test runner + tsx + Playwright      | Calculation invariants and browser journey — [`tests/`](tests/)                                               |
+| Trust blueprint   | Hyperledger Fabric chaincode, JavaScript | Organisation approval and identity-bound consent — [`contracts/fabric/`](contracts/fabric/)                   |
+| Reserve blueprint | Solidity                                 | Consent-gated, capped sponsor releases — [`contracts/ResilienceReserve.sol`](contracts/ResilienceReserve.sol) |
 
 **AI note:** LangChain, LangGraph and an LLM are not required or used in this MVP. A future language assistant could explain the engine's verified outputs in local languages; it should not invent amounts or override approval rules.
 
@@ -164,9 +179,10 @@ npm test                  # model, validation and audit tests
 npm run build             # type check + production bundle
 npx playwright install chromium
 npm run test:browser       # with the dev server running
+npm run test:browser:ci    # starts and stops its own test server
 ```
 
-The test suite covers **507 buffer/shock/profile combinations**, exact allocations, insufficient capacity, seasonal versus decline examples, malformed history, hash tampering, and a browser journey through consent, reserve, persistence and mobile layout.
+The **12 model/audit tests** include **507 buffer/shock/profile combinations**, exact allocations, insufficient capacity, living-cost deficits, seasonal versus decline examples, malformed history and hash tampering. Browser checks cover CSV imports, exported JSON, consent, scenario changes, reserve gates and limits, persistence and mobile layout. These checks also run before GitHub Pages publication. See the [validation record](docs/VALIDATION.md).
 
 ### Bring a synthetic CSV
 
@@ -202,6 +218,12 @@ TidePlan supports the intent of **SDG 8: Decent Work and Economic Growth**, espe
 To evaluate it responsibly: measure buffer-breach months, forecast error, outstanding debt, total borrower cost, informed-consent completion and lender recovery in a consented pilot. Check performance across livelihood types and do not penalise a borrower solely for a model signal.
 
 ## Next, with evidence
+
+### Business path: sell better planning, not borrower penalties
+
+The proposed customer is a microfinance institution, cooperative or lending NGO. Start with a small, consented retrospective pilot; compare affordability, staff review effort and recovery outcomes. If the results justify adoption, offer an institutional subscription with optional onboarding support. Borrowers are not charged TidePlan penalty fees. Pricing, partnerships and willingness to pay remain unvalidated.
+
+### Responsible product roadmap
 
 1. Backtest against realistic seasonal and shock scenarios; add forecast intervals and variable interest terms.
 2. Add authenticated lender/borrower roles, revocable consent and protected backend storage.
