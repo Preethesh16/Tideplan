@@ -39,12 +39,12 @@ try {
       height: v.videoHeight,
       error: v.error,
     }));
-  assert.ok(metadata.duration > 300);
+  assert.ok(metadata.duration > 120 && metadata.duration < 180);
   assert.equal(metadata.width, 1440);
   assert.equal(metadata.height, 1000);
   assert.equal(metadata.error, null);
   await page.waitForFunction(
-    () => document.querySelectorAll("#chapters button").length === 14,
+    () => document.querySelectorAll("#chapters button").length === 7,
   );
   await page.locator("video").evaluate(async (v) => {
     v.muted = true;
@@ -54,12 +54,12 @@ try {
   assert.ok(
     await page.locator("video").evaluate((v) => v.currentTime > 0 && !v.paused),
   );
-  await page.locator("#chapters button").nth(10).click();
+  await page.locator("#chapters button").nth(5).click();
   await page.waitForTimeout(1200);
   assert.ok(
     await page
       .locator("video")
-      .evaluate((v) => v.currentTime > 250 && !v.error),
+      .evaluate((v) => v.currentTime > 105 && !v.error),
   );
   const captions = await page.request.get(base + "demo/captions.vtt");
   assert.equal(captions.status(), 200);
@@ -69,7 +69,7 @@ try {
   assert.ok((await transcript.text()).includes("Team Vibecoders"));
   assert.deepEqual(errors, []);
   console.log(
-    "PASS: published app, stress guard, video decoding/playback, aspect ratio, 14 chapters, seeking, captions and transcript.",
+    "PASS: published app, stress guard, video decoding/playback, aspect ratio, seven chapters, seeking, captions and transcript.",
     metadata,
   );
 } finally {

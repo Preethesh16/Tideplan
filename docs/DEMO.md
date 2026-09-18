@@ -1,6 +1,6 @@
 # Reproduce the product walkthrough
 
-The published walkthrough is a real Playwright browser recording with generated narration. It has no artificial zoom or slideshow transitions. Its source script is `scripts/demo-scenes.json`.
+The published walkthrough is a 2 minute 47 second real-browser cut with generated narration. It has no artificial zoom or slideshow transitions. Its source script is `scripts/demo-scenes.json`.
 
 ## Requirements
 

@@ -45,7 +45,7 @@ TidePlan puts that question at the centre of a lender–borrower conversation. I
 
 **[Play with narration, English captions and chapter navigation →](https://preethesh16.github.io/Tideplan/demo/)**
 
-The recording starts at the overview and covers all three borrower profiles, explanations, buffer and shock controls, safe failure, monthly payments, CSV validation/import, lender approval, borrower acceptance, version changes, reserve support, tamper detection and evidence exports. It closes with the architecture and prototype boundaries.
+This **2 minute 47 second** cut starts at the borrower overview and covers the cash-flow pattern, fixed versus aligned payments, buffer and shock controls, safe failure, lender approval, borrower acceptance, reserve support, tamper detection and architecture. It closes with the prototype boundaries.
 
 [Download MP4](https://preethesh16.github.io/Tideplan/demo/tideplan-demo.mp4) · [Read the transcript](https://preethesh16.github.io/Tideplan/demo/transcript.txt) · [Reproduce the recording](docs/DEMO.md)
 

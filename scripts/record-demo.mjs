@@ -69,14 +69,14 @@ await pause(1300);
 const actions = {
   intro: async () => {
     await page.mouse.move(780, 160, { steps: 20 });
-    await pause(6000);
-    await scroll(250);
+    await pause(3800);
+    await scroll(200);
   },
   asha: async () => {
     await scroll(0);
-    await pause(4500);
+    await pause(2500);
     await page.mouse.move(820, 670, { steps: 30 });
-    await pause(4500);
+    await pause(3000);
     await scroll(390);
   },
   evidence: async () => {
@@ -95,30 +95,21 @@ const actions = {
   studio: async () => {
     await person("Asha Devi");
     await nav("Plan studio");
-    await pause(2000);
+    await pause(1300);
     await page.locator("#buffer").fill("3000");
-    await pause(3000);
+    await pause(1400);
     await page.locator("#buffer").fill("2000");
     await page.locator("#shock").fill("10");
-    await pause(3000);
+    await pause(2000);
   },
   failure: async () => {
     await page.locator("#shock").fill("60");
-    await pause(2200);
+    await pause(1400);
     await scroll(660);
-    await pause(3000);
+    await pause(1600);
     await page
       .getByRole("button", { name: "Approve as demo lender" })
       .scrollIntoViewIfNeeded();
-  },
-  calendar: async () => {
-    await scroll(0);
-    await page.locator("#shock").fill("5");
-    await scroll(600);
-    await pause(4500);
-    await scroll(1020);
-    await pause(2500);
-    await click(page.getByRole("button", { name: /Download CSV/ }));
   },
   import: async () => {
     await page
@@ -144,12 +135,17 @@ const actions = {
     await pause(4500);
   },
   consent: async () => {
+    await scroll(0);
+    await page.locator("#shock").fill("5");
+    await pause(1200);
+    await scroll(620);
+    await pause(1600);
     await click(page.getByRole("button", { name: "Approve as demo lender" }));
-    await pause(2200);
+    await pause(1000);
     await page.getByRole("checkbox").scrollIntoViewIfNeeded();
-    await pause(3000);
+    await pause(1200);
     await click(page.getByRole("checkbox"));
-    await pause(1800);
+    await pause(700);
     await click(page.getByRole("button", { name: /Accept as demo borrower/ }));
   },
   versions: async () => {
@@ -165,43 +161,23 @@ const actions = {
     await pause(1000);
     await page.getByText("Both parties have agreed.").scrollIntoViewIfNeeded();
   },
-  reserve: async () => {
+  trust: async () => {
     await click(page.getByRole("button", { name: /Trust ledger/ }));
-    await pause(3500);
+    await pause(1800);
     await click(page.getByRole("button", { name: /Authorize ₹1,000/ }));
-    await pause(4500);
-  },
-  verify: async () => {
+    await pause(1000);
     await click(
       page.getByRole("button", { name: "Verify chain", exact: true }),
     );
-    await scroll(460);
-    await pause(2000);
-    await click(page.getByText("Inspect recorded evidence").first());
-    await pause(2800);
-    await click(page.getByText("Inspect recorded evidence").first());
-    await click(
-      page.getByRole("button", { name: "Export evidence", exact: true }),
-    );
     await pause(1000);
     await click(page.getByRole("button", { name: /Test a tampered copy/ }));
-    await pause(4500);
-    await scroll(0);
-    await click(
-      page.getByRole("button", { name: "Export report", exact: true }),
-    );
+    await pause(1500);
   },
   method: async () => {
     await nav("How it works");
-    await pause(7000);
+    await pause(3000);
     await scroll(400);
-    await pause(7000);
-    await scroll(650);
-  },
-  closing: async () => {
-    await nav("Overview");
-    await scroll(0);
-    await page.mouse.move(760, 160, { steps: 30 });
+    await pause(3000);
   },
 };
 const preRoll = (Date.now() - openedAt) / 1000;
